@@ -60,7 +60,7 @@ def ParseArgs():
     parser.add_argument('-c', "--conf", help="A different config file")
     parser.add_argument('--debug', '-d', action='count', default=0)
     args = parser.parse_args()
-    if ( debug ):
+    if ( args.debug ):
         print("Node: ", node)
         print("Conf: ", conf)
         print("Debug: ", debug)
