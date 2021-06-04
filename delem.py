@@ -63,7 +63,7 @@ def ParseArgs():
     if ( args.debug ):
         print("Node: ", node)
         print("Conf: ", conf)
-        print("Debug: ", debug)
+        print("Debug: ", args.debug)
 
     return(args.node, args.conf, args.debug)
 #----
@@ -102,7 +102,12 @@ def SetTClimit(client, Int, value):
 #----
 # Get the status of an interface. Look for existing delay and loss values. They are persistant
 def GetTCstatus(client, Int):
-    global delay, loss
+    global delay, loss, IntList
+
+    if Int not in IntList:
+        print(f'No such interface: {Int}')
+        return False
+
     cmd = f"tc qdisc show dev {Int}"
 
     if (debug):
@@ -119,8 +124,9 @@ def GetTCstatus(client, Int):
         delay = False
         loss = False
         print(f'{Int}: no impairments')
-        return
+        return True
 
+#    tc = re.match(r'qdisc netem \d{4}: root refcnt \d+ limit (\d+)', string)
     tc = re.match(r'qdisc netem \d{4}: root refcnt \d+ limit (\d+)', string)
     if tc:
         print(f'{Int}: Limit: {tc.group(1)}', end=' ')
@@ -140,7 +146,7 @@ def GetTCstatus(client, Int):
         print()
         if (debug):
             print(f'GetTCstatus 2: Int: {Int} Delay: {delay} Loss: {loss}')        
-        return
+        return True
     else:
         print("Bad Parse of 'tc' output!")
         exit()
@@ -218,20 +224,22 @@ class DelemCmd(cmd.Cmd):
         self.prompt = f"Delem({Int}): "
         
     def do_interface(self, arg):
+        global Int
         "Set the interface to use."
         Int = arg
-        GetTCstatus(client, Int)
-        self.prompt = f"Delem({Int}): "
+        if ( GetTCstatus(client, Int)):
+            self.prompt = f"Delem({Int}): "
 
     def complete_interface(self, text, line, begidx, endidx):
-        if not text:
-            completions = IntList
-        else:
-            completions = [ f for f in IntList if f.startswith(text)]
-        return completions
+        "Complete interface names"
+        #print(f'text: {text} line: {line}')
+        List =  [ f for f in IntList if f.startswith(text)] 
+        #print(List)
+        return List
 
     def do_node(self, arg):
         "Change the node we are connected to."
+        global IntList
         if (debug):
             print(f'Change node to {arg}')
         Int, IntList = SetTCnode(client, config, arg)
@@ -243,6 +251,7 @@ class DelemCmd(cmd.Cmd):
             completions = NodeList
         else:
             completions = [ f for f in NodeList if f.startswith(text)]
+        return completions
             
     def do_clear(self, arg):
         "Set the interface back to normal."
