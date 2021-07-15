@@ -165,14 +165,27 @@ def setTCdelay(client, Int, value):
 # Add, Change, Change/Loss
     
     if (debug):
-        print(f'setTCdelay: Int: {Int} Delay: {delay} Loss: {loss}')
+        print(f'setTCdelay: Int: {Int} Delay: {value} Loss: {loss}')
+
+# We use only milliseconds. Accept with N or Nms
+    nv = re.search(r'\d+$',value)
+    if nv:
+        num = nv.group()
+        value = num + "ms"
+        if (debug):
+            print(f'Found only number: {num} value: {value}')
+
+    nv = re.search(r'\d+ms$',value)
+    if not nv :
+        print(f'Illegal delay value: {value}')
+        return()
 
     if ((not delay) and (not loss)):
-        cmd = f"tc qdisc add dev {Int} root netem delay {value}ms"
+        cmd = f"tc qdisc add dev {Int} root netem delay {value}"
     elif (not loss):
-        cmd = f"tc qdisc change dev {Int} root netem delay {value}ms"
+        cmd = f"tc qdisc change dev {Int} root netem delay {value}"
     else:
-        cmd = f"tc qdisc change dev {Int} root netem delay {value}ms loss {loss}"
+        cmd = f"tc qdisc change dev {Int} root netem delay {value} loss {loss}"
 
     execTC(client, Int, cmd)
     GetTCstatus(client, Int)
@@ -202,7 +215,8 @@ def setTCloss(client, Int, value):
 #---
 # Send a 'tc' command to the remote node
 def execTC(client, Int, cmd):
-
+    if (debug):
+        print(f'execTC: {cmd}')
     stdin, stdout, stderr = client.exec_command(cmd)
     error = stderr.read().decode()
     if error:
@@ -224,8 +238,8 @@ class DelemCmd(cmd.Cmd):
         self.prompt = f"Delem({Int}): "
         
     def do_interface(self, arg):
-        global Int
         "Set the interface to use."
+        global Int
         Int = arg
         if ( GetTCstatus(client, Int)):
             self.prompt = f"Delem({Int}): "
@@ -282,6 +296,10 @@ class DelemCmd(cmd.Cmd):
         return True
 
     def do_quit(self, line):
+        "Bye-bye!"
+        return True
+
+    def do_exit(self, line):
         "Bye-bye!"
         return True
     
